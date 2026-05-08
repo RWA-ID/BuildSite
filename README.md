@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# buildsite.eth
+
+The internet's permanent layer for ENS names. A fully decentralized, serverless ENS-powered website builder. Connect your wallet, pick a template, fill in your data, and publish a permanent IPFS-hosted website tied to your ENS contenthash — all client-side, in a single session.
+
+**Live at:** [buildsite.eth.limo](https://buildsite.eth.limo)
+
+---
+
+## Features
+
+- **17 production templates** across 5 categories (Builder/Web3, Professional, Creative, Business, Community)
+- **6-step wizard**: ENS name → Category → Template → Profile → Preview → Publish
+- **Two ENS modes**: register a new `.eth` name in-flow, or use one you already own
+- **Permanent IPFS hosting** via Pinata, with the CID written to your ENS contenthash on-chain
+- **Self-contained HTML output** — no external JS framework, no build step, single file
+- **Fully client-side** — no servers, no API routes, exports to static IPFS bundle
+
+## Tech Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 14 (App Router, TypeScript, `output: 'export'`) |
+| Styling | Tailwind CSS, Space Grotesk + JetBrains Mono + Instrument Serif |
+| Wallet | RainbowKit + wagmi v2 + viem |
+| ENS | viem ENS utils, ETHRegistrarController, Public Resolver |
+| IPFS | Pinata SDK (`pinata-web3`), client-side upload |
+| State | Zustand |
+| Forms | React Hook Form + zod |
+| Animation | Framer Motion |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+cp .env.example .env.local
+# Fill in your WalletConnect Project ID, Pinata JWT, fee recipient, Alchemy RPC
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All variables are `NEXT_PUBLIC_` — fully client-side static app, no server.
 
-## Learn More
+```env
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
+NEXT_PUBLIC_PLATFORM_FEE_RECIPIENT=0x...
+NEXT_PUBLIC_PLATFORM_FEE_ETH=0.00825
+NEXT_PUBLIC_PINATA_JWT=...           # scoped upload-only key
+NEXT_PUBLIC_PINATA_GATEWAY=https://gateway.pinata.cloud
+NEXT_PUBLIC_ALCHEMY_RPC=https://eth-mainnet.g.alchemy.com/v2/...
+NEXT_PUBLIC_TEST_MODE=true           # waives platform fee for existing ENS owners
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Build & Deploy to IPFS
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+# Output: /out
+# Upload /out to Pinata, set the resulting CID as the contenthash on buildsite.eth
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
+MIT — see [LICENSE](./LICENSE).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built by [ensgiant.eth](https://ensgiant.eth.limo). Powered by ENS, hosted on IPFS, owned by no one.
