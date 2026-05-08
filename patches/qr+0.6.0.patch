@@ -1,0 +1,13 @@
+diff --git a/node_modules/qr/index.js b/node_modules/qr/index.js
+index 40c38fd..d5767b6 100644
+--- a/node_modules/qr/index.js
++++ b/node_modules/qr/index.js
+@@ -1561,7 +1561,7 @@ export function encodeQR(text, output = 'raw', opts = {}) {
+     // and §9.1 requires 4X "on all four sides". Keep the compact historical
+     // 2-module default to avoid changing encoder output; callers that need a
+     // standards-conformant quiet zone must pass `border: 4` explicitly.
+-    const border = _opts.border === undefined ? 2 : _opts.border;
++    const border = _opts.border === undefined ? 2 : Math.max(1, _opts.border);
+     if (!Number.isSafeInteger(border) || border <= 0)
+         throw new Error(`invalid border=${border}`);
+     res = res.border(border, false); // Add border
