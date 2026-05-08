@@ -69,7 +69,6 @@ export function IPhoneFrame({ src, srcDoc, title = "preview", className = "" }: 
                 title={title}
                 className="absolute inset-0 w-full h-full border-0 bg-[#06070a]"
                 sandbox="allow-scripts allow-same-origin"
-                loading="lazy"
               />
             ) : null}
 

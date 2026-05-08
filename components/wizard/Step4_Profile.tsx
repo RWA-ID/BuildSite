@@ -47,6 +47,9 @@ const profileSchema = z.object({
   discordUrl: z.string().optional(),
   governanceUrl: z.string().optional(),
   proposalCount: z.string().optional(),
+  donateAddress: z.string().optional(),
+  subdomainsStr: z.string().optional(),
+  sponsors: z.array(z.object({ name: z.string() })).optional(),
   youtubeChannelId: z.string().optional(),
   subscriberCount: z.string().optional(),
   sponsorshipEmail: z.string().optional(),
@@ -145,6 +148,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       languagesStr: (profileData.languages || []).join(", "),
       practiceAreasStr: (profileData.practiceAreas || []).join(", "),
       gamesStr: (profileData.games || []).join(", "),
+      donateAddress: profileData.donateAddress || "",
+      subdomainsStr: (profileData.subdomains || []).join(", "),
+      sponsors: profileData.sponsors || [],
       projects: (profileData.projects || []).map(p => ({
         name: p.name, description: p.description, url: p.url, githubUrl: p.githubUrl,
         twitterUrl: p.twitterUrl, badge: p.badge, tags: p.tags.join(", "),
@@ -155,6 +161,7 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
 
   const { fields: projectFields, append: appendProject, remove: removeProject } = useFieldArray({ control, name: "projects" });
   const { fields: statFields, append: appendStat, remove: removeStat } = useFieldArray({ control, name: "stats" });
+  const { fields: sponsorFields, append: appendSponsor, remove: removeSponsor } = useFieldArray({ control, name: "sponsors" });
 
   function onSubmit(values: FormValues) {
     setProfileData({
@@ -213,6 +220,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       languages: parseCSV(values.languagesStr),
       practiceAreas: parseCSV(values.practiceAreasStr),
       games: parseCSV(values.gamesStr),
+      donateAddress: values.donateAddress,
+      subdomains: parseCSV(values.subdomainsStr),
+      sponsors: (values.sponsors || []).filter(s => s.name && s.name.trim().length > 0),
       projects: (values.projects || []).map(p => ({
         name: p.name, description: p.description,
         url: p.url || "", githubUrl: p.githubUrl || "",
@@ -232,6 +242,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
     } catch { }
   }
 
+  const isENSMaxi = templateId === "ens_maxi";
+  const SPONSOR_TEMPLATE_IDS = ["ensgiant", "ens_maxi", "content_creator", "streamer", "founder", "builder", "defi", "dao"];
+  const showSponsors = SPONSOR_TEMPLATE_IDS.includes(templateId);
   const isENSGiant = templateId === "ensgiant";
   const isFounder = templateId === "founder";
   const isBuilder = templateId === "builder";
@@ -447,6 +460,75 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
             <input {...register("consultationUrl")} className={inputClass} placeholder="https://cal.com/your-firm/consultation" />
             <p className="text-xs text-gray-500 mt-1">Becomes the primary &ldquo;Schedule consultation&rdquo; CTA on your site.</p>
           </div>
+        </div>
+      )}
+
+      {/* ENS Maxi specific */}
+      {isENSMaxi && (
+        <div className={`${sectionClass} pt-6`}>
+          <h3 className="font-semibold text-white">ENS Namespace</h3>
+          <div>
+            <label className={labelClass}>Subdomains you actually own (comma-separated)</label>
+            <input {...register("subdomainsStr")} className={inputClass} placeholder="pay.yourname.eth, vault.yourname.eth" />
+            <p className="text-xs text-gray-500 mt-1">Leave blank if you don&rsquo;t have any — your site will show a Support / Tip card instead.</p>
+          </div>
+          <div>
+            <label className={labelClass}>Active chains (comma-separated)</label>
+            <input {...register("chainsStr")} className={inputClass} placeholder="Ethereum, Base, Optimism" />
+          </div>
+          <div>
+            <label className={labelClass}>Tip / Donate ETH address</label>
+            <input {...register("donateAddress")} className={inputClass} placeholder="0x… (or leave blank to skip)" />
+            <p className="text-xs text-gray-500 mt-1">Used in the Support card when you have no subdomains. Visitors can tip you in ETH or any token.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Sponsors (creator + crypto-native templates) */}
+      {showSponsors && (
+        <div className={`${sectionClass} pt-6`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-white">Sponsorships</h3>
+            <button
+              type="button"
+              onClick={() => appendSponsor({ name: "" })}
+              className="text-xs text-blue-400 hover:text-blue-300"
+              disabled={sponsorFields.length >= 6}
+            >
+              + Add sponsor
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 -mt-1">Are you sponsored by any crypto brands? Add up to 6 — each gets a logo strip on your site.</p>
+          {sponsorFields.length === 0 && (
+            <button
+              type="button"
+              onClick={() => appendSponsor({ name: "" })}
+              className="w-full py-3 rounded-xl border border-dashed border-white/15 text-sm text-gray-400 hover:border-white/30 hover:text-white transition-colors"
+            >
+              + Add your first sponsor
+            </button>
+          )}
+          {sponsorFields.map((field, i) => {
+            const slotKey = `sponsorLogo${i}`;
+            return (
+              <div key={field.id} className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-white">Sponsor {i + 1}</span>
+                  <button type="button" onClick={() => removeSponsor(i)} className="text-gray-600 hover:text-red-400 text-xs">Remove</button>
+                </div>
+                <div>
+                  <label className={labelClass}>Brand name</label>
+                  <input {...register(`sponsors.${i}.name`)} className={inputClass} placeholder="e.g. Uniswap, Coinbase, Phantom" />
+                </div>
+                <ImageUploader
+                  label="Logo (transparent PNG/SVG works best)"
+                  value={uploadedImages[slotKey]}
+                  onChange={(file, preview) => handleImageUpload(slotKey, file, preview)}
+                  aspect="banner"
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -101,12 +101,16 @@ export function generateENSMaxiHTML(
 
   const ensAppUrl = `https://app.ens.domains/${ensName}`;
   const primaryChain = chains[0] || "Mainnet";
-  const subnames = [
-    `pay.${ensName}`,
-    `vault.${ensName}`,
-    `chat.${ensName}`,
-    `agent.${ensName}`,
-  ];
+  const subnames: string[] = (profileData.subdomains || []).filter(Boolean);
+  const hasSubnames = subnames.length > 0;
+  const donateAddress = (profileData.donateAddress || "").trim();
+  const sponsors: { name: string }[] = profileData.sponsors || [];
+  const sponsorEntries = sponsors
+    .map((s, i) => ({
+      name: (s?.name || "").trim(),
+      logo: uploadedImages[`sponsorLogo${i}`] || "",
+    }))
+    .filter((s) => s.name.length > 0);
 
   const hasFollowAction = !!(fc || tw);
   const followHref = fc || tw;
@@ -125,7 +129,7 @@ export function generateENSMaxiHTML(
 </nav>`;
 
   const heroStats = [
-    { label: "Subnames", value: String(subnames.length) },
+    { label: hasSubnames ? "Subnames" : "Address", value: hasSubnames ? String(subnames.length) : (donateAddress ? `${donateAddress.slice(0, 6)}…${donateAddress.slice(-4)}` : ensName) },
     { label: "Active chains", value: String(chains.length || 1) },
     { label: "Onchain", value: "∞" },
   ];
@@ -257,6 +261,25 @@ section:last-of-type{border-bottom:none}
 .namespace-sub{font-family:'JetBrains Mono',monospace;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin-bottom:18px}
 .subname-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media(max-width:720px){.subname-list{grid-template-columns:1fr}.namespace-card{padding:40px 24px}}
+.support-card{display:flex;flex-direction:column;gap:24px;padding:32px;border:1px solid var(--line);border-radius:16px;background:var(--bg-2)}
+.support-head{display:flex;gap:18px;align-items:flex-start}
+.support-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--grad);color:#fff;flex-shrink:0;box-shadow:0 0 24px rgba(91,141,239,.35)}
+.support-icon svg{width:22px;height:22px}
+.support-title{font-size:1.35rem;font-weight:600;letter-spacing:-.015em;margin-bottom:4px}
+.support-desc{color:var(--ink-2);font-size:.96rem;line-height:1.55;text-wrap:pretty}
+.support-addr{padding:18px 20px;border:1px dashed var(--line-2);border-radius:12px;background:rgba(255,255,255,.02)}
+.support-addr-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
+.support-addr-value{font-family:'JetBrains Mono',monospace;font-size:.95rem;color:var(--ink);word-break:break-all}
+.support-actions{display:flex;gap:10px;flex-wrap:wrap}
+.sponsor-strip{padding:36px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.015),transparent)}
+.sponsor-strip-inner{display:flex;flex-direction:column;align-items:center;gap:18px}
+.sponsor-label{font-family:'JetBrains Mono',monospace;font-size:.74rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-3)}
+.sponsor-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:32px}
+.sponsor-item{display:flex;align-items:center;gap:10px;color:var(--ink-2);font-size:.95rem;font-weight:500;opacity:.85;transition:opacity .2s}
+.sponsor-item:hover{opacity:1;color:var(--ink)}
+.sponsor-logo{height:32px;width:auto;max-width:120px;object-fit:contain;filter:brightness(0.96) saturate(1.05)}
+.sponsor-name{font-family:'Space Grotesk',sans-serif}
+@media(max-width:600px){.sponsor-row{gap:22px}.sponsor-logo{height:24px;max-width:96px}}
 .subname{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:rgba(7,8,21,.45);font-family:'JetBrains Mono',monospace;font-size:.92rem;color:var(--ink);transition:all .2s ease}
 .subname:hover{border-color:var(--blue);transform:translateX(3px)}
 .subname-icon{width:30px;height:30px;border-radius:8px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;color:var(--blue);flex-shrink:0}
@@ -359,18 +382,52 @@ ${navHtml}
       <div class="namespace-inner">
         <div class="namespace-sub">// root name</div>
         <div class="namespace-name">${escapeHtml(ensName)}</div>
-        <div class="namespace-sub">// representative subnames</div>
+        ${hasSubnames ? `
+        <div class="namespace-sub">// my subnames</div>
         <div class="subname-list">
           ${subnames.map((s) => `
           <div class="subname">
             <div class="subname-icon">${SVG.chain}</div>
             <span class="subname-text">${escapeHtml(s)}</span>
           </div>`).join("")}
-        </div>
+        </div>` : `
+        <div class="namespace-sub">// support &amp; tip</div>
+        <div class="support-card">
+          <div class="support-head">
+            <div class="support-icon">${SVG.diamond}</div>
+            <div>
+              <div class="support-title">Tip ${escapeHtml(ensName)}</div>
+              <div class="support-desc">Send ETH or any token to my ENS — straight onchain, no middleman.</div>
+            </div>
+          </div>
+          <div class="support-addr">
+            <div class="support-addr-label">// send to</div>
+            <div class="support-addr-value">${escapeHtml(donateAddress || ensName)}</div>
+          </div>
+          <div class="support-actions">
+            <a href="${escapeHtml(`https://app.ens.domains/${ensName}`)}" target="_blank" rel="noopener" class="btn btn-primary">Open in ENS app ${SVG.arrow}</a>
+            ${donateAddress ? `<a href="${escapeHtml(`https://etherscan.io/address/${donateAddress}`)}" target="_blank" rel="noopener" class="btn btn-ghost">View on Etherscan</a>` : ""}
+          </div>
+        </div>`}
       </div>
     </div>
   </div>
 </section>
+${sponsorEntries.length > 0 ? `
+<section class="sponsor-strip">
+  <div class="container">
+    <div class="sponsor-strip-inner reveal">
+      <div class="sponsor-label">// Sponsored by</div>
+      <div class="sponsor-row">
+        ${sponsorEntries.map((s) => `
+        <div class="sponsor-item">
+          ${s.logo ? `<img src="${escapeHtml(s.logo)}" alt="${escapeHtml(s.name)}" class="sponsor-logo">` : ""}
+          <span class="sponsor-name">${escapeHtml(s.name)}</span>
+        </div>`).join("")}
+      </div>
+    </div>
+  </div>
+</section>` : ""}
 ${chainCards}
 <section id="social">
   <div class="container">
@@ -456,6 +513,19 @@ const io = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+// Hash-anchor clicks: scroll inside the document instead of letting the
+// browser navigate (prevents in-iframe srcdoc previews from bouncing to the
+// embedder URL on Safari/Chrome).
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const id = a.getAttribute('href').slice(1);
+  if (!id) return;
+  const target = document.getElementById(id);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 </script>
 </body>
 </html>`;

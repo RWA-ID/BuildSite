@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAccount, useSendTransaction, useWriteContract, usePublicClient } from "wagmi";
 import { useBuilderStore } from "@/lib/store";
-import { FEE_RECIPIENT, TEST_MODE, getEffectiveFee, getEffectiveFeeETH } from "@/lib/fee";
+import { FEE_RECIPIENT, PLATFORM_FEE_ETH, PLATFORM_FEE_WEI } from "@/lib/fee";
 import { uploadHTMLToIPFS } from "@/lib/pinata";
 import { encodeCIDasContenthash } from "@/lib/contenthash";
 import { ConnectButton } from "@/components/ui/ConnectButton";
@@ -70,7 +70,7 @@ function Step({ n, label, status }: { n: number; label: string; status: "idle" |
 }
 
 export function Step6_Publish({ onBack }: { onBack: () => void }) {
-  const { ensName, ensMode, generatedHtml, publishStatus, publishError, ipfsCid, setPublishStatus, setPublishError, setIpfsCid } = useBuilderStore();
+  const { ensName, generatedHtml, publishStatus, publishError, ipfsCid, setPublishStatus, setPublishError, setIpfsCid } = useBuilderStore();
   const { address, isConnected } = useAccount();
   const wagmiClient = usePublicClient();
   const readClient = wagmiClient ?? defaultClient;
@@ -83,33 +83,29 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
   const [step2Status, setStep2Status] = useState<StepStatus>("idle");
   const [step3Status, setStep3Status] = useState<StepStatus>("idle");
   const [cid, setCid] = useState(ipfsCid);
+  const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
 
-  const effectiveFee = getEffectiveFee(ensMode);
-  const effectiveFeeETH = getEffectiveFeeETH(ensMode);
-  const isFree = effectiveFee === BigInt(0);
+  const effectiveFee = PLATFORM_FEE_WEI;
+  const effectiveFeeETH = PLATFORM_FEE_ETH;
 
   async function handlePublish() {
     if (!address || !ensName || !generatedHtml) return;
     setPublishStatus("paying");
     setPublishError(null);
 
-    // Step 1: Pay fee (skip if free)
-    if (isFree) {
-      setStep1Status("skipped");
-    } else {
-      setStep1Status("loading");
-      try {
-        await sendTransactionAsync({
-          to: FEE_RECIPIENT,
-          value: effectiveFee,
-        });
-        setStep1Status("done");
-      } catch (err: unknown) {
-        setStep1Status("error");
-        setPublishError((err as Error).message || "Fee payment failed");
-        setPublishStatus("error");
-        return;
-      }
+    // Step 1: Pay platform fee
+    setStep1Status("loading");
+    try {
+      await sendTransactionAsync({
+        to: FEE_RECIPIENT,
+        value: effectiveFee,
+      });
+      setStep1Status("done");
+    } catch (err: unknown) {
+      setStep1Status("error");
+      setPublishError((err as Error).message || "Fee payment failed");
+      setPublishStatus("error");
+      return;
     }
 
     // Step 2: Upload to IPFS
@@ -176,9 +172,36 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
         functionName: "setContenthash",
         args: [node, contenthashHex as `0x${string}`],
       });
+      setPendingTxHash(txHash);
 
-      // Wait for the receipt — do not mark "done" until the chain confirms
-      const receipt = await readClient.waitForTransactionReceipt({ hash: txHash });
+      // Wait for the receipt with a generous timeout — mainnet inclusion can
+      // legitimately take several minutes when gas is competitive. We poll
+      // up to 15 minutes before giving up. On timeout we DO NOT mark this as
+      // an error — the tx is almost certainly in the mempool and will land.
+      let receipt: { status: "success" | "reverted" } | null = null;
+      try {
+        receipt = await readClient.waitForTransactionReceipt({
+          hash: txHash,
+          timeout: 15 * 60 * 1000,
+          pollingInterval: 4_000,
+          retryCount: 12,
+        });
+      } catch {
+        // Timed out waiting for inclusion. Surface the hash so the user can
+        // verify on Etherscan; the tx will still mine eventually.
+        setStep3Status("error");
+        setPublishError(
+          `Your contenthash transaction was submitted but hasn't confirmed yet. ` +
+            `It will mine on its own — track it on Etherscan: ` +
+            `https://etherscan.io/tx/${txHash} . ` +
+            `Once confirmed, your site will be live at ${ensName}.limo. ` +
+            `If it has been more than an hour, your wallet may have dropped or replaced the tx — ` +
+            `re-run this step and you'll be charged again.`
+        );
+        setPublishStatus("error");
+        return;
+      }
+
       if (receipt.status !== "success") {
         throw new Error(
           `Transaction reverted on-chain (tx ${txHash}). Contenthash was not written.`
@@ -202,8 +225,7 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
           );
         }
       } catch {
-        // Read-back is best-effort; if the resolver doesn't expose contenthash()
-        // for some reason, the receipt status above is the source of truth.
+        // Read-back is best-effort; the receipt status above is the source of truth.
       }
 
       setStep3Status("done");
@@ -224,9 +246,7 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
     <div className="max-w-lg mx-auto">
       <h2 className="text-2xl font-bold mb-2">Publish Your Site</h2>
       <p className="text-gray-400 mb-8">
-        {isFree
-          ? "Test mode — fee waived for existing ENS owners. Upload to IPFS and set your contenthash."
-          : "3 steps to put your site on IPFS and link it to your ENS name forever."}
+        3 steps to put your site on IPFS and link it to your ENS name forever.
       </p>
 
       {!isConnected && (
@@ -236,23 +256,13 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {TEST_MODE && isFree && (
-        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-          <p className="text-yellow-400 text-sm font-semibold">🧪 Test Mode Active</p>
-          <p className="text-yellow-400/70 text-xs mt-1">Platform fee waived for existing ENS owners. Gas for contenthash transaction still applies.</p>
-        </div>
-      )}
-
       {/* Cost summary */}
       {publishStatus === "idle" && (
         <div className="mb-6 p-5 bg-white/5 rounded-2xl border border-white/10 space-y-3">
           <h3 className="font-semibold text-white text-sm">Publishing Costs</h3>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Platform fee</span>
-            {isFree
-              ? <span className="text-green-400 font-mono">FREE (test)</span>
-              : <span className="text-white font-mono">{effectiveFeeETH} ETH</span>
-            }
+            <span className="text-white font-mono">{effectiveFeeETH} ETH</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">ENS contenthash gas</span>
@@ -273,9 +283,19 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
       </div>
 
       {isError && publishError && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2">
           <p className="text-red-400 text-sm font-semibold mb-1">Error</p>
-          <p className="text-red-400/80 text-xs">{publishError}</p>
+          <p className="text-red-400/80 text-xs whitespace-pre-wrap">{publishError}</p>
+          {pendingTxHash && (
+            <a
+              href={`https://etherscan.io/tx/${pendingTxHash}`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-1.5 mt-1 text-xs font-mono text-blue-400 hover:text-blue-300 underline decoration-dotted underline-offset-2"
+            >
+              Track tx on Etherscan ↗
+            </a>
+          )}
         </div>
       )}
 
@@ -320,7 +340,7 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
             disabled={!isConnected || isRunning}
             className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold disabled:opacity-50 transition-colors"
           >
-            {isRunning ? "Publishing…" : isError ? "Retry" : isFree ? "Publish Free →" : "Publish Now →"}
+            {isRunning ? "Publishing…" : isError ? "Retry" : "Publish Now →"}
           </button>
         )}
       </div>

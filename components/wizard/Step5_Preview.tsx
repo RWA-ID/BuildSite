@@ -63,7 +63,7 @@ export function Step5_Preview({ onNext, onBack }: { onNext: () => void; onBack: 
           </div>
         </div>
       ) : (
-        <div className="flex justify-center py-6">
+        <div className="flex justify-center items-start py-12 px-4 min-h-[760px]">
           {html && <IPhoneFrame srcDoc={html} title={`${ensName || "preview"}.limo`} />}
         </div>
       )}

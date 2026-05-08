@@ -82,6 +82,11 @@ export interface ProfileData {
   subscriberCount: string;
   sponsorshipEmail: string;
   mediaKit: string;
+  // ENS Maxi specific
+  subdomains: string[];
+  donateAddress: string;
+  // Sponsorship — array of { name } with logo URLs stored in uploadedImages["sponsorLogo${index}"]
+  sponsors: { name: string }[];
   // Streamer specific
   twitchChannel: string;
   isLive: boolean;
