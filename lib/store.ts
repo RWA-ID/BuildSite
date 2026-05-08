@@ -67,6 +67,8 @@ export interface ProfileData {
   barNumber: string;
   barState: string;
   consultationUrl: string;
+  lawSchool: string;
+  yearOfCall: string;
   // DAO specific
   daoName: string;
   snapshotUrl: string;

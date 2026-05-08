@@ -38,6 +38,8 @@ const profileSchema = z.object({
   barNumber: z.string().optional(),
   barState: z.string().optional(),
   consultationUrl: z.string().optional(),
+  lawSchool: z.string().optional(),
+  yearOfCall: z.string().optional(),
   daoName: z.string().optional(),
   snapshotUrl: z.string().optional(),
   treasuryAddress: z.string().optional(),
@@ -117,6 +119,8 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       barNumber: profileData.barNumber || "",
       barState: profileData.barState || "",
       consultationUrl: profileData.consultationUrl || "",
+      lawSchool: profileData.lawSchool || "",
+      yearOfCall: profileData.yearOfCall || "",
       daoName: profileData.daoName || "",
       snapshotUrl: profileData.snapshotUrl || "",
       treasuryAddress: profileData.treasuryAddress || "",
@@ -183,6 +187,8 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       barNumber: values.barNumber,
       barState: values.barState,
       consultationUrl: values.consultationUrl,
+      lawSchool: values.lawSchool,
+      yearOfCall: values.yearOfCall,
       daoName: values.daoName,
       snapshotUrl: values.snapshotUrl,
       treasuryAddress: values.treasuryAddress,
@@ -234,6 +240,7 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
   const isDAO = templateId === "dao";
   const isContentCreator = templateId === "content_creator";
   const isStreamer = templateId === "streamer";
+  const isGenericProfessional = ["engineer", "consultant", "architect"].includes(templateId);
   const showSocials = SOCIAL_TEMPLATE_IDS.includes(templateId);
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 text-sm";
@@ -413,7 +420,11 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
           <div><label className={labelClass}>Hospital / Clinic</label><input {...register("hospital")} className={inputClass} placeholder="Mayo Clinic" /></div>
           <div><label className={labelClass}>Credentials (comma-separated)</label><input {...register("credentialsStr")} className={inputClass} placeholder="MD, FACC, FESC" /></div>
           <div><label className={labelClass}>Languages (comma-separated)</label><input {...register("languagesStr")} className={inputClass} placeholder="English, Spanish, Arabic" /></div>
-          <div><label className={labelClass}>Appointment URL</label><input {...register("appointmentUrl")} className={inputClass} placeholder="https://…" /></div>
+          <div>
+            <label className={labelClass}>Booking link (Calendly, Cal.com, Doctolib, Zocdoc, etc.)</label>
+            <input {...register("appointmentUrl")} className={inputClass} placeholder="https://cal.com/your-clinic/visit" />
+            <p className="text-xs text-gray-500 mt-1">Becomes the primary &ldquo;Book appointment&rdquo; CTA on your site.</p>
+          </div>
         </div>
       )}
 
@@ -427,7 +438,36 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
             <div><label className={labelClass}>Bar Number</label><input {...register("barNumber")} className={inputClass} placeholder="123456" /></div>
             <div><label className={labelClass}>Bar State/Jurisdiction</label><input {...register("barState")} className={inputClass} placeholder="California" /></div>
           </div>
-          <div><label className={labelClass}>Consultation URL</label><input {...register("consultationUrl")} className={inputClass} placeholder="https://…" /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div><label className={labelClass}>Year of Call</label><input {...register("yearOfCall")} className={inputClass} placeholder="2014" /></div>
+            <div><label className={labelClass}>Law School (J.D.)</label><input {...register("lawSchool")} className={inputClass} placeholder="Harvard Law School" /></div>
+          </div>
+          <div>
+            <label className={labelClass}>Booking link (Calendly, Cal.com, SimplyBook, Acuity, etc.)</label>
+            <input {...register("consultationUrl")} className={inputClass} placeholder="https://cal.com/your-firm/consultation" />
+            <p className="text-xs text-gray-500 mt-1">Becomes the primary &ldquo;Schedule consultation&rdquo; CTA on your site.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Engineer / Consultant / Architect (Generic Professional) */}
+      {isGenericProfessional && (
+        <div className={`${sectionClass} pt-6`}>
+          <h3 className="font-semibold text-white">Professional Info</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div><label className={labelClass}>Discipline / Title</label><input {...register("role")} className={inputClass} placeholder={templateId === "engineer" ? "Senior Software Engineer" : templateId === "consultant" ? "Strategy Consultant" : "Principal Architect"} /></div>
+            <div><label className={labelClass}>Firm / Studio</label><input {...register("firm")} className={inputClass} placeholder="Studio name" /></div>
+          </div>
+          {templateId === "engineer" ? (
+            <div><label className={labelClass}>Skills / Tools (comma-separated)</label><input {...register("techStackStr")} className={inputClass} placeholder="TypeScript, Go, Postgres, AWS" /></div>
+          ) : (
+            <div><label className={labelClass}>Services (comma-separated)</label><input {...register("servicesStr")} className={inputClass} placeholder="Strategy, Operations, M&A" /></div>
+          )}
+          <div>
+            <label className={labelClass}>Booking link (Calendly, Cal.com, etc.)</label>
+            <input {...register("calendarUrl")} className={inputClass} placeholder="https://cal.com/your-handle/intro" />
+            <p className="text-xs text-gray-500 mt-1">Becomes the primary &ldquo;Schedule a call&rdquo; CTA on your site.</p>
+          </div>
         </div>
       )}
 

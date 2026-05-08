@@ -94,6 +94,8 @@ export function generateLawyerHTML(
   const areas: string[] = profileData.practiceAreas || [];
   const bar = escapeHtml(profileData.barNumber || "");
   const barState = escapeHtml(profileData.barState || "");
+  const yearOfCall = escapeHtml(profileData.yearOfCall || "");
+  const lawSchool = escapeHtml(profileData.lawSchool || "");
   const consultUrl = profileData.consultationUrl || "";
   const email = profileData.email || "";
   const phone = (profileData as Partial<ProfileData> & { phone?: string }).phone || "";
@@ -101,6 +103,7 @@ export function generateLawyerHTML(
   const tw = twitterUrl(profileData.twitter);
   const li = linkedinUrl(profileData.linkedin);
   const profileImg = uploadedImages["profileImage"] || "";
+  const bannerImg = uploadedImages["bannerImage"] || "";
   const monogram = initials(rawName);
   const year = new Date().getFullYear();
 
@@ -116,8 +119,8 @@ export function generateLawyerHTML(
     worksFor: profileData.firm ? { "@type": "LegalService", name: profileData.firm } : undefined,
   });
 
-  const heroBarLine = (bar || barState)
-    ? `Bar No. ${bar || "—"}${barState ? ` &middot; ${barState}` : ""}`
+  const heroBarLine = (bar || barState || yearOfCall)
+    ? `Bar No. ${bar || "—"}${barState ? ` &middot; ${barState}` : ""}${yearOfCall ? ` &middot; Called ${yearOfCall}` : ""}`
     : "Bar admitted attorney";
 
   const areasHTML = areas.length > 0 ? `
@@ -144,7 +147,7 @@ export function generateLawyerHTML(
   </div>
 </section>` : "";
 
-  const credentialsHTML = (bar || barState || firm) ? `
+  const credentialsHTML = (bar || barState || firm || yearOfCall || lawSchool) ? `
 <section id="credentials">
   <div class="container">
     <div class="section-head reveal">
@@ -165,8 +168,12 @@ export function generateLawyerHTML(
       </div>
       <div class="cred-row">
         <div class="cred-label">Year of Call</div>
-        <div class="cred-value">—</div>
+        <div class="cred-value">${yearOfCall || "—"}</div>
       </div>
+      ${lawSchool ? `<div class="cred-row">
+        <div class="cred-label">Juris Doctor</div>
+        <div class="cred-value">${lawSchool}</div>
+      </div>` : ""}
       ${firm ? `<div class="cred-row">
         <div class="cred-label">Firm</div>
         <div class="cred-value">${firm}</div>
@@ -259,6 +266,9 @@ a{color:inherit;text-decoration:none}
 .nav-cta:hover{background:var(--gold-2) !important;color:var(--navy) !important}
 @media(max-width:720px){.nav-links a:not(.nav-cta){display:none}}
 .hero{padding:96px 0 88px;position:relative;border-bottom:1px solid var(--line);overflow:hidden}
+.hero-banner{position:absolute;inset:0;z-index:0;overflow:hidden}
+.hero-banner img{width:100%;height:100%;object-fit:cover;opacity:.32;filter:saturate(.85) contrast(1.05)}
+.hero-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,.55) 0%,rgba(10,14,26,.85) 60%,var(--bg) 100%)}
 .hero-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto;gap:64px;align-items:center}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:500;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);padding:8px 14px;border:1px solid rgba(201,178,107,.3);border-radius:100px;background:rgba(201,178,107,.05);margin-bottom:32px}
 .hero-eyebrow .live{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
@@ -376,6 +386,7 @@ footer{padding:64px 0 50px;border-top:1px solid var(--line);position:relative;z-
 </nav>
 <main>
 <header class="hero">
+  ${bannerImg ? `<div class="hero-banner"><img src="${escapeHtml(bannerImg)}" alt="${name}"></div>` : ""}
   <div class="container">
     <div class="hero-inner">
       <div>

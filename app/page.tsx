@@ -57,8 +57,11 @@ export default function HomePage() {
   const router = useRouter();
   const pendingBuild = useRef(false);
 
+  // Whenever the user is connected on the home page, send them straight to
+  // step 1 of the wizard. Connecting from the nav button or from a build CTA
+  // both flow through here.
   useEffect(() => {
-    if (isConnected && pendingBuild.current) {
+    if (isConnected) {
       pendingBuild.current = false;
       router.push("/build");
     }
@@ -421,7 +424,7 @@ export default function HomePage() {
                 </button>
               )}
               <p className="text-center text-xs text-white/40 mt-4">
-                Plus ENS gas (~$2-5) and registration fee for new names
+                Plus ENS gas (~$0.05–0.50) and registration fee for new names
               </p>
             </div>
           </motion.div>

@@ -1,15 +1,24 @@
 "use client";
 import { useState } from "react";
-import { useAccount, useSendTransaction, useWriteContract } from "wagmi";
+import { useAccount, useSendTransaction, useWriteContract, usePublicClient } from "wagmi";
 import { useBuilderStore } from "@/lib/store";
 import { FEE_RECIPIENT, TEST_MODE, getEffectiveFee, getEffectiveFeeETH } from "@/lib/fee";
 import { uploadHTMLToIPFS } from "@/lib/pinata";
 import { encodeCIDasContenthash } from "@/lib/contenthash";
 import { ConnectButton } from "@/components/ui/ConnectButton";
-import { normalize } from "@/lib/ens";
+import {
+  normalize,
+  publicClient as defaultClient,
+  ENS_REGISTRY,
+  ENS_PUBLIC_RESOLVER,
+  ENS_NAMEWRAPPER,
+  ensRegistryAbi,
+  nameWrapperAbi,
+  getOwnerOfNode,
+  getResolverForNode,
+} from "@/lib/ens";
 import { namehash } from "viem/ens";
-
-const ENS_PUBLIC_RESOLVER = "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63" as `0x${string}`;
+import { zeroAddress } from "viem";
 
 const resolverAbi = [
   {
@@ -21,6 +30,13 @@ const resolverAbi = [
       { name: "hash", type: "bytes" },
     ],
     outputs: [],
+  },
+  {
+    name: "contenthash",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "node", type: "bytes32" }],
+    outputs: [{ type: "bytes" }],
   },
 ] as const;
 
@@ -56,6 +72,8 @@ function Step({ n, label, status }: { n: number; label: string; status: "idle" |
 export function Step6_Publish({ onBack }: { onBack: () => void }) {
   const { ensName, ensMode, generatedHtml, publishStatus, publishError, ipfsCid, setPublishStatus, setPublishError, setIpfsCid } = useBuilderStore();
   const { address, isConnected } = useAccount();
+  const wagmiClient = usePublicClient();
+  const readClient = wagmiClient ?? defaultClient;
 
   const { sendTransactionAsync } = useSendTransaction();
   const { writeContractAsync } = useWriteContract();
@@ -110,18 +128,84 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
       return;
     }
 
-    // Step 3: Set contenthash
+    // Step 3: Set contenthash on the actual resolver assigned to this name
     setPublishStatus("setting_contenthash");
     setStep3Status("loading");
     try {
-      const node = namehash(normalize(ensName));
+      const normalized = normalize(ensName);
+      const node = namehash(normalized);
       const contenthashHex = encodeCIDasContenthash(uploadedCid);
-      await writeContractAsync({
-        address: ENS_PUBLIC_RESOLVER,
+
+      // Resolve the resolver currently set on the name. If none, set the default
+      // Public Resolver via ENS Registry / NameWrapper first.
+      let resolverAddr = await getResolverForNode(node);
+
+      if (resolverAddr === zeroAddress) {
+        // Determine if the name is wrapped — owner == NameWrapper means we must
+        // call setResolver on the NameWrapper, otherwise on the ENS Registry.
+        const registryOwner = await getOwnerOfNode(node);
+        const isWrapped =
+          registryOwner.toLowerCase() === ENS_NAMEWRAPPER.toLowerCase();
+
+        const setResolverHash = isWrapped
+          ? await writeContractAsync({
+              address: ENS_NAMEWRAPPER,
+              abi: nameWrapperAbi,
+              functionName: "setResolver",
+              args: [node, ENS_PUBLIC_RESOLVER],
+            })
+          : await writeContractAsync({
+              address: ENS_REGISTRY,
+              abi: ensRegistryAbi,
+              functionName: "setResolver",
+              args: [node, ENS_PUBLIC_RESOLVER],
+            });
+        const setResolverRcpt = await readClient.waitForTransactionReceipt({
+          hash: setResolverHash,
+        });
+        if (setResolverRcpt.status !== "success") {
+          throw new Error("Setting the resolver failed on-chain. Try again.");
+        }
+        resolverAddr = ENS_PUBLIC_RESOLVER;
+      }
+
+      // Write contenthash to the actual resolver
+      const txHash = await writeContractAsync({
+        address: resolverAddr,
         abi: resolverAbi,
         functionName: "setContenthash",
         args: [node, contenthashHex as `0x${string}`],
       });
+
+      // Wait for the receipt — do not mark "done" until the chain confirms
+      const receipt = await readClient.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") {
+        throw new Error(
+          `Transaction reverted on-chain (tx ${txHash}). Contenthash was not written.`
+        );
+      }
+
+      // Sanity-read the contenthash back from the resolver to confirm
+      try {
+        const onChainHash = (await readClient.readContract({
+          address: resolverAddr,
+          abi: resolverAbi,
+          functionName: "contenthash",
+          args: [node],
+        })) as `0x${string}`;
+        if (
+          !onChainHash ||
+          onChainHash.toLowerCase() !== contenthashHex.toLowerCase()
+        ) {
+          throw new Error(
+            `Resolver did not record the new contenthash (read back ${onChainHash}).`
+          );
+        }
+      } catch {
+        // Read-back is best-effort; if the resolver doesn't expose contenthash()
+        // for some reason, the receipt status above is the source of truth.
+      }
+
       setStep3Status("done");
       setPublishStatus("done");
     } catch (err: unknown) {
@@ -172,7 +256,7 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">ENS contenthash gas</span>
-            <span className="text-gray-400">~$2–5</span>
+            <span className="text-gray-400">~$0.05–0.50</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">IPFS storage</span>

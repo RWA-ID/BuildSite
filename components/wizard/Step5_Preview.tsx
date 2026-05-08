@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useBuilderStore } from "@/lib/store";
 import { renderTemplateToHTML } from "@/lib/templateRenderer";
+import { IPhoneFrame } from "@/components/ui/IPhoneFrame";
 
 export function Step5_Preview({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { templateId, profileData, ensName, uploadedImages, setGeneratedHtml } = useBuilderStore();
@@ -36,38 +37,36 @@ export function Step5_Preview({ onNext, onBack }: { onNext: () => void; onBack: 
         </div>
       </div>
 
-      {/* Browser frame */}
-      <div className="bg-[#1a1a1a] rounded-2xl border border-white/10 overflow-hidden">
-        {/* Browser chrome */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/60" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-            <div className="w-3 h-3 rounded-full bg-green-500/60" />
+      {/* Preview frame */}
+      {viewport === "desktop" ? (
+        <div className="bg-[#1a1a1a] rounded-2xl border border-white/10 overflow-hidden">
+          {/* Browser chrome */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500/60" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+              <div className="w-3 h-3 rounded-full bg-green-500/60" />
+            </div>
+            <div className="flex-1 bg-white/5 rounded-lg px-3 py-1.5 text-xs text-gray-500 font-mono">
+              {ensName || "yourname.eth"}.limo
+            </div>
           </div>
-          <div className="flex-1 bg-white/5 rounded-lg px-3 py-1.5 text-xs text-gray-500 font-mono">
-            {ensName || "yourname.eth"}.limo
-          </div>
-        </div>
-
-        {/* Preview area */}
-        <div className="bg-white flex justify-center overflow-hidden" style={{ height: "550px" }}>
-          <div
-            className="transition-all duration-300 h-full overflow-hidden"
-            style={{ width: viewport === "desktop" ? "100%" : "375px" }}
-          >
+          <div className="bg-white overflow-hidden" style={{ height: "550px" }}>
             {html && (
               <iframe
                 srcDoc={html}
                 className="w-full h-full border-0"
                 title="Site Preview"
-                sandbox="allow-same-origin"
-                style={{ transform: "scale(1)", transformOrigin: "top left" }}
+                sandbox="allow-scripts allow-same-origin"
               />
             )}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex justify-center py-6">
+          {html && <IPhoneFrame srcDoc={html} title={`${ensName || "preview"}.limo`} />}
+        </div>
+      )}
 
       <div className="flex gap-4 mt-8">
         <button onClick={onBack} className="px-6 py-3 rounded-xl border border-white/10 text-gray-400 hover:text-white transition-colors">← Edit</button>

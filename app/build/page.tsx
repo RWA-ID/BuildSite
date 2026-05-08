@@ -1,5 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMounted } from "@/hooks/useMounted";
 import { useBuilderStore } from "@/lib/store";
@@ -15,7 +18,18 @@ import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 export default function BuildPage() {
   const mounted = useMounted();
-  const { step, setStep } = useBuilderStore();
+  const { step, setStep, publishStatus } = useBuilderStore();
+  const { isConnected, status } = useAccount();
+  const router = useRouter();
+
+  // Disconnecting on the build page should send the user back home — but
+  // only after wagmi has actually settled (status === "disconnected"), so we
+  // don't bounce them away during the initial reconnect race.
+  useEffect(() => {
+    if (mounted && status === "disconnected" && !isConnected && publishStatus !== "done") {
+      router.push("/");
+    }
+  }, [mounted, status, isConnected, publishStatus, router]);
 
   if (!mounted) {
     return (
