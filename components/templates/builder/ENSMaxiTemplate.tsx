@@ -1,5 +1,6 @@
 "use client";
 import { ProfileData } from "@/lib/store";
+import { OPENSEA_SVG, GRAILS_SVG, EFP_PNG_B64 } from "./portfolioLogos";
 
 const SVG = {
   arrow: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>`,
@@ -104,6 +105,16 @@ export function generateENSMaxiHTML(
   const subnames: string[] = (profileData.subdomains || []).filter(Boolean);
   const hasSubnames = subnames.length > 0;
   const donateAddress = (profileData.donateAddress || "").trim();
+  const openseaUrl = (profileData.openseaUrl || "").trim();
+  const grailsUrl = (profileData.grailsUrl || "").trim();
+  const featuredNames = (profileData.featuredNames || [])
+    .map((n) => n.trim().toLowerCase())
+    .filter((n) => n.length > 0);
+  const portfolioLinks = [
+    openseaUrl ? { brand: "opensea", url: openseaUrl, label: "OpenSea", logo: OPENSEA_SVG } : null,
+    grailsUrl ? { brand: "grails", url: grailsUrl, label: "Grails", logo: GRAILS_SVG } : null,
+    { brand: "efp", url: efpUrl, label: "EFP", logo: `<img src="data:image/png;base64,${EFP_PNG_B64}" alt="Ethereum Follow Protocol" />` },
+  ].filter(Boolean) as { brand: string; url: string; label: string; logo: string }[];
   const sponsors: { name: string }[] = profileData.sponsors || [];
   const sponsorEntries = sponsors
     .map((s, i) => ({
@@ -271,6 +282,27 @@ section:last-of-type{border-bottom:none}
 .support-addr-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
 .support-addr-value{font-family:'JetBrains Mono',monospace;font-size:.95rem;color:var(--ink);word-break:break-all}
 .support-actions{display:flex;gap:10px;flex-wrap:wrap}
+.portfolio-strip{padding:48px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+.portfolio-head{display:flex;align-items:baseline;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.portfolio-sub{color:var(--ink-3);font-size:.92rem}
+.portfolio-row{display:flex;gap:14px;flex-wrap:wrap}
+.portfolio-pill{display:inline-flex;align-items:center;gap:14px;padding:12px 18px;border-radius:14px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--ink);text-decoration:none;transition:transform .2s ease,border-color .2s ease,background .2s ease;min-height:56px}
+.portfolio-pill:hover{transform:translateY(-2px);border-color:var(--blue);background:var(--bg-3)}
+.portfolio-logo{display:inline-flex;align-items:center;justify-content:center;height:28px}
+.portfolio-logo svg{height:28px;width:auto;display:block}
+.portfolio-logo img{height:28px;width:auto;display:block;border-radius:6px}
+.portfolio-grails .portfolio-logo svg{filter:invert(1) brightness(1.1)}
+.portfolio-name{font-family:'JetBrains Mono',monospace;font-size:.86rem;font-weight:500;letter-spacing:.01em;color:var(--ink-2)}
+.portfolio-arrow{color:var(--ink-3);display:inline-flex}
+.portfolio-pill:hover .portfolio-arrow{color:var(--ink)}
+.featured-names{padding:96px 0;border-top:1px solid var(--line)}
+.name-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.name-card{display:flex;flex-direction:column;gap:10px;padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--bg-1);color:var(--ink);text-decoration:none;transition:transform .2s ease,border-color .2s ease,background .2s ease}
+.name-card:hover{transform:translateY(-3px);border-color:var(--blue);background:var(--bg-2)}
+.name-card-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-3)}
+.name-card-value{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:500;color:var(--ink);word-break:break-all;letter-spacing:-.01em}
+.name-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:.78rem;color:var(--ink-3);font-family:'JetBrains Mono',monospace;letter-spacing:.04em}
+.name-card:hover .name-card-foot{color:var(--ink-2)}
 .sponsor-strip{padding:36px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.015),transparent)}
 .sponsor-strip-inner{display:flex;flex-direction:column;align-items:center;gap:18px}
 .sponsor-label{font-family:'JetBrains Mono',monospace;font-size:.74rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-3)}
@@ -412,6 +444,43 @@ ${navHtml}
     </div>
   </div>
 </section>
+${portfolioLinks.length > 0 ? `
+<section class="portfolio-strip">
+  <div class="container">
+    <div class="portfolio-head reveal">
+      <div class="section-label">// Portfolio</div>
+      <p class="portfolio-sub">Where my ENS names live onchain.</p>
+    </div>
+    <div class="portfolio-row reveal">
+      ${portfolioLinks.map((p) => `
+      <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="portfolio-pill portfolio-${p.brand}" aria-label="${escapeHtml(p.label)}">
+        <span class="portfolio-logo">${p.logo}</span>
+        <span class="portfolio-name">${escapeHtml(p.label)}</span>
+        <span class="portfolio-arrow">${SVG.arrow}</span>
+      </a>`).join("")}
+    </div>
+  </div>
+</section>` : ""}
+${featuredNames.length > 0 ? `
+<section class="featured-names">
+  <div class="container">
+    <div class="section-head reveal">
+      <div>
+        <div class="section-label">// Featured names</div>
+        <h2 class="section-title">My ENS<br><span class="ital">portfolio.</span></h2>
+      </div>
+      <p class="section-sub">A few names from my collection. Each one is its own onchain identity.</p>
+    </div>
+    <div class="name-grid">
+      ${featuredNames.map((n) => `
+      <a href="${escapeHtml(`https://grails.app/${n}`)}" target="_blank" rel="noopener" class="name-card reveal">
+        <div class="name-card-label">// name</div>
+        <div class="name-card-value">${escapeHtml(n)}</div>
+        <div class="name-card-foot"><span>View on Grails</span>${SVG.arrow}</div>
+      </a>`).join("")}
+    </div>
+  </div>
+</section>` : ""}
 ${sponsorEntries.length > 0 ? `
 <section class="sponsor-strip">
   <div class="container">

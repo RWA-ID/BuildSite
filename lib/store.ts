@@ -85,6 +85,9 @@ export interface ProfileData {
   // ENS Maxi specific
   subdomains: string[];
   donateAddress: string;
+  openseaUrl: string;
+  grailsUrl: string;
+  featuredNames: string[];
   // Sponsorship — array of { name } with logo URLs stored in uploadedImages["sponsorLogo${index}"]
   sponsors: { name: string }[];
   // Streamer specific

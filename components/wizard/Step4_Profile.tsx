@@ -48,6 +48,9 @@ const profileSchema = z.object({
   governanceUrl: z.string().optional(),
   proposalCount: z.string().optional(),
   donateAddress: z.string().optional(),
+  openseaUrl: z.string().optional(),
+  grailsUrl: z.string().optional(),
+  featuredNamesStr: z.string().optional(),
   subdomainsStr: z.string().optional(),
   sponsors: z.array(z.object({ name: z.string() })).optional(),
   youtubeChannelId: z.string().optional(),
@@ -149,6 +152,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       practiceAreasStr: (profileData.practiceAreas || []).join(", "),
       gamesStr: (profileData.games || []).join(", "),
       donateAddress: profileData.donateAddress || "",
+      openseaUrl: profileData.openseaUrl || "",
+      grailsUrl: profileData.grailsUrl || "",
+      featuredNamesStr: (profileData.featuredNames || []).join(", "),
       subdomainsStr: (profileData.subdomains || []).join(", "),
       sponsors: profileData.sponsors || [],
       projects: (profileData.projects || []).map(p => ({
@@ -221,6 +227,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
       practiceAreas: parseCSV(values.practiceAreasStr),
       games: parseCSV(values.gamesStr),
       donateAddress: values.donateAddress,
+      openseaUrl: values.openseaUrl,
+      grailsUrl: values.grailsUrl,
+      featuredNames: parseCSV(values.featuredNamesStr),
       subdomains: parseCSV(values.subdomainsStr),
       sponsors: (values.sponsors || []).filter(s => s.name && s.name.trim().length > 0),
       projects: (values.projects || []).map(p => ({
@@ -480,6 +489,20 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
             <label className={labelClass}>Tip / Donate ENS name</label>
             <input {...register("donateAddress")} className={inputClass} placeholder="yourname.eth (or leave blank to use your main ENS)" />
             <p className="text-xs text-gray-500 mt-1">Used in the Support card when you have no subdomains. Visitors can tip you in ETH or any token at this ENS.</p>
+          </div>
+          <div>
+            <label className={labelClass}>OpenSea ENS portfolio URL</label>
+            <input {...register("openseaUrl")} className={inputClass} placeholder="https://opensea.io/your-address?tab=collected" />
+          </div>
+          <div>
+            <label className={labelClass}>Grails ENS portfolio URL</label>
+            <input {...register("grailsUrl")} className={inputClass} placeholder="https://grails.app/yourname.eth" />
+          </div>
+          <p className="text-xs text-gray-500 -mt-2">Shown in the Portfolio strip alongside your EFP profile. Leave blank to hide a logo.</p>
+          <div>
+            <label className={labelClass}>Featured ENS names you own (comma-separated)</label>
+            <input {...register("featuredNamesStr")} className={inputClass} placeholder="vitalik.eth, nick.eth, 0xdeployer.eth" />
+            <p className="text-xs text-gray-500 mt-1">Each name renders as a card linking to grails.app/&lt;name&gt;. Leave blank to hide.</p>
           </div>
         </div>
       )}
