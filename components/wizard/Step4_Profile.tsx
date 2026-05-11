@@ -477,9 +477,9 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
             <input {...register("chainsStr")} className={inputClass} placeholder="Ethereum, Base, Optimism" />
           </div>
           <div>
-            <label className={labelClass}>Tip / Donate ETH address</label>
-            <input {...register("donateAddress")} className={inputClass} placeholder="0x… (or leave blank to skip)" />
-            <p className="text-xs text-gray-500 mt-1">Used in the Support card when you have no subdomains. Visitors can tip you in ETH or any token.</p>
+            <label className={labelClass}>Tip / Donate ENS name</label>
+            <input {...register("donateAddress")} className={inputClass} placeholder="yourname.eth (or leave blank to use your main ENS)" />
+            <p className="text-xs text-gray-500 mt-1">Used in the Support card when you have no subdomains. Visitors can tip you in ETH or any token at this ENS.</p>
           </div>
         </div>
       )}

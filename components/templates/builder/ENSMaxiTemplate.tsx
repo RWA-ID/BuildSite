@@ -129,7 +129,7 @@ export function generateENSMaxiHTML(
 </nav>`;
 
   const heroStats = [
-    { label: hasSubnames ? "Subnames" : "Address", value: hasSubnames ? String(subnames.length) : (donateAddress ? `${donateAddress.slice(0, 6)}…${donateAddress.slice(-4)}` : ensName) },
+    { label: hasSubnames ? "Subnames" : "Tip ENS", value: hasSubnames ? String(subnames.length) : (donateAddress || ensName) },
     { label: "Active chains", value: String(chains.length || 1) },
     { label: "Onchain", value: "∞" },
   ];
@@ -405,8 +405,7 @@ ${navHtml}
             <div class="support-addr-value">${escapeHtml(donateAddress || ensName)}</div>
           </div>
           <div class="support-actions">
-            <a href="${escapeHtml(`https://app.ens.domains/${ensName}`)}" target="_blank" rel="noopener" class="btn btn-primary">Open in ENS app ${SVG.arrow}</a>
-            ${donateAddress ? `<a href="${escapeHtml(`https://etherscan.io/address/${donateAddress}`)}" target="_blank" rel="noopener" class="btn btn-ghost">View on Etherscan</a>` : ""}
+            <a href="${escapeHtml(`https://app.ens.domains/${donateAddress || ensName}`)}" target="_blank" rel="noopener" class="btn btn-primary">Open in ENS app ${SVG.arrow}</a>
           </div>
         </div>`}
       </div>

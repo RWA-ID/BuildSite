@@ -73,7 +73,10 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
   const { ensName, generatedHtml, publishStatus, publishError, ipfsCid, setPublishStatus, setPublishError, setIpfsCid } = useBuilderStore();
   const { address, isConnected } = useAccount();
   const wagmiClient = usePublicClient();
-  const readClient = wagmiClient ?? defaultClient;
+  // Prefer our own Alchemy RPC for receipt polling — wallet-injected RPCs
+  // often fail to return receipts reliably, causing the publish flow to
+  // hang even after the tx has mined.
+  const readClient = defaultClient ?? wagmiClient;
 
   const { sendTransactionAsync } = useSendTransaction();
   const { writeContractAsync } = useWriteContract();
