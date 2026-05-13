@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { renderTemplateToHTML } from "@/lib/templateRenderer";
 import { ProfileData } from "@/lib/store";
 
@@ -129,7 +129,34 @@ const SAMPLE_DATA: Record<string, Partial<ProfileData>> = {
 };
 
 export function TemplatePreview({ templateId, className = "" }: { templateId: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            io.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const html = useMemo(() => {
+    if (!visible) return null;
     const data = SAMPLE_DATA[templateId] || SAMPLE_DATA.ensgiant;
     const ensName = `${templateId === "ensgiant" ? "ensgiant" : templateId.replace(/_/g, "")}.eth`;
     try {
@@ -137,28 +164,30 @@ export function TemplatePreview({ templateId, className = "" }: { templateId: st
     } catch {
       return "<html><body style='background:#0a0a0a'></body></html>";
     }
-  }, [templateId]);
+  }, [templateId, visible]);
 
   return (
-    <div className={`relative w-full h-full overflow-hidden bg-[#0a0a0a] ${className}`}>
-      <div
-        className="absolute inset-0 origin-top-left pointer-events-none"
-        style={{
-          width: "1280px",
-          height: "1600px",
-          transform: "scale(0.18)",
-          transformOrigin: "top left",
-        }}
-      >
-        <iframe
-          srcDoc={html}
-          title={`${templateId} preview`}
-          className="w-full h-full border-0"
-          sandbox=""
-          loading="lazy"
-          scrolling="no"
-        />
-      </div>
+    <div ref={containerRef} className={`relative w-full h-full overflow-hidden bg-[#0a0a0a] ${className}`}>
+      {html && (
+        <div
+          className="absolute inset-0 origin-top-left pointer-events-none"
+          style={{
+            width: "1280px",
+            height: "1600px",
+            transform: "scale(0.18)",
+            transformOrigin: "top left",
+          }}
+        >
+          <iframe
+            srcDoc={html}
+            title={`${templateId} preview`}
+            className="w-full h-full border-0"
+            sandbox=""
+            loading="lazy"
+            scrolling="no"
+          />
+        </div>
+      )}
     </div>
   );
 }
