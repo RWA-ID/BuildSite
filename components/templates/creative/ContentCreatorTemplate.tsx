@@ -67,7 +67,6 @@ export function generateContentCreatorHTML(
       "I make videos, essays, and conversations about the things I can't stop thinking about."
   );
   const profileImg = uploadedImages["profileImage"] || "";
-  const bannerImg = uploadedImages["bannerImage"] || "";
 
   const ytId = (profileData.youtubeChannelId || "").trim();
   const ytChannelUrl = ytId
@@ -134,7 +133,7 @@ export function generateContentCreatorHTML(
 
   const heroHTML = `
 <header class="hero">
-  ${bannerImg ? `<div class="hero-banner"><img src="${escapeHtml(bannerImg)}" alt=""/></div>` : `<div class="hero-banner hero-banner-fallback"></div>`}
+  <div class="hero-banner hero-banner-fallback"></div>
   <div class="container">
     <div class="hero-inner">
       <div>

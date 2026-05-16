@@ -282,12 +282,6 @@ export function Step4_Profile({ onNext, onBack }: { onNext: () => void; onBack: 
           value={uploadedImages["profileImage"]}
           onChange={(file, preview) => handleImageUpload("profileImage", file, preview)}
         />
-        <ImageUploader
-          label="Banner Image"
-          value={uploadedImages["bannerImage"]}
-          onChange={(file, preview) => handleImageUpload("bannerImage", file, preview)}
-          aspect="banner"
-        />
       </div>
 
       {/* Universal fields */}

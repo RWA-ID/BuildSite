@@ -160,7 +160,6 @@ export function generateGenericCreativeHTML(
   );
   const location = escapeHtml(profileData.location || "");
   const profileImg = uploadedImages["profileImage"] || "";
-  const bannerImg = uploadedImages["bannerImage"] || "";
   const email = profileData.email || "";
 
   const tw = twitterUrl(profileData.twitter);
@@ -429,14 +428,6 @@ main,header,footer,nav{position:relative;z-index:1}
 @media(max-width:720px){.nav-links a:not(.nav-cta){display:none}}
 /* hero */
 .hero{padding:96px 0 80px;position:relative;border-bottom:1px solid var(--line);overflow:hidden}
-${
-  bannerImg
-    ? `.hero::before{content:'';position:absolute;inset:0;background-image:url('${escapeHtml(
-        bannerImg
-      )}');background-size:cover;background-position:center;opacity:.18;filter:blur(6px) saturate(.85);z-index:0}
-.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 0,${t.bg} 90%);z-index:1}`
-    : ""
-}
 .hero-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto;gap:60px;align-items:center}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:${t.monoFont};font-size:.78rem;font-weight:500;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);padding:8px 14px;border:1px solid var(--line-2);border-radius:100px;background:rgba(255,255,255,.02);margin-bottom:28px}
 .hero-eyebrow .live{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}

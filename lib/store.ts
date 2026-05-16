@@ -22,7 +22,6 @@ export interface ProfileData {
   tagline: string;
   bio: string;
   profileImage: File | null;
-  bannerImage: File | null;
   email: string;
   location: string;
   website: string;

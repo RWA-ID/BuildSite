@@ -61,7 +61,6 @@ export function generateDAOHTML(
   const discordUrl = profileData.discordUrl || "";
   const proposals = escapeHtml(profileData.proposalCount || "0");
   const tw = twitterUrl(profileData.twitter);
-  const bannerImg = uploadedImages["bannerImage"] || "";
   const profileImg = uploadedImages["profileImage"] || "";
 
   const monogram = (token || rawName.replace(/\.eth$/, "")).slice(0, 3).toUpperCase();
@@ -220,7 +219,7 @@ export function generateDAOHTML(
 <meta property="og:description" content="${tagline}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://${ensName}.limo">
-${bannerImg ? `<meta property="og:image" content="${bannerImg}">` : profileImg ? `<meta property="og:image" content="${profileImg}">` : ""}
+${profileImg ? `<meta property="og:image" content="${profileImg}">` : ""}
 <script type="application/ld+json">${jsonLd}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -245,8 +244,7 @@ code{font-family:'JetBrains Mono',monospace}
 .nav-cta{background:var(--grad) !important;color:#04060d !important;font-weight:600 !important}
 @media(max-width:720px){.nav-links a:not(.nav-cta){display:none}}
 .hero{padding:0 0 80px;position:relative;border-bottom:1px solid var(--line);overflow:hidden}
-.hero-banner{position:relative;width:100%;height:${bannerImg ? "240px" : "120px"};overflow:hidden;border-bottom:1px solid var(--line)}
-.hero-banner img{width:100%;height:100%;object-fit:cover;opacity:.6;filter:saturate(.9) contrast(1.05)}
+.hero-banner{position:relative;width:100%;height:120px;overflow:hidden;border-bottom:1px solid var(--line)}
 .hero-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg) 100%);pointer-events:none}
 .hero-inner{padding:64px 0 0;position:relative;z-index:2;display:grid;grid-template-columns:1fr auto;gap:60px;align-items:center}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:500;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);padding:8px 14px;border:1px solid var(--line-2);border-radius:100px;background:rgba(56,189,248,.04);margin-bottom:28px}
@@ -373,7 +371,7 @@ footer{padding:60px 0 50px;border-top:1px solid var(--line);position:relative;z-
 </nav>
 <main>
 <header class="hero">
-  ${bannerImg ? `<div class="hero-banner"><img src="${escapeHtml(bannerImg)}" alt="${name}"></div>` : `<div class="hero-banner"></div>`}
+  <div class="hero-banner"></div>
   <div class="container">
     <div class="hero-inner">
       <div>

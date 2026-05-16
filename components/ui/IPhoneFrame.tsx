@@ -9,7 +9,7 @@ interface IPhoneFrameProps {
 
 export function IPhoneFrame({ src, srcDoc, title = "preview", className = "" }: IPhoneFrameProps) {
   return (
-    <div className={`relative mx-auto ${className}`} style={{ maxWidth: "320px" }}>
+    <div className={`relative mx-auto ${className}`} style={{ width: "320px" }}>
       {/* Glow */}
       <div className="absolute -inset-8 bg-gradient-to-b from-blue-500/20 via-violet-500/20 to-cyan-400/20 blur-3xl opacity-70 pointer-events-none" />
 
