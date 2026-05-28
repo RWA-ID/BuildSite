@@ -1,5 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+// Persist "platform fee already paid" across retries (and reloads) so a failed
+// contenthash tx doesn't cause us to re-charge the user. Keyed by the
+// (wallet, ENS name, fee amount) tuple — if any of those change, the user pays
+// again, which is correct.
+function feePaidKey(address: string, ensName: string, feeWei: bigint) {
+  return `buildsite-eth:feePaid:${address.toLowerCase()}:${ensName.toLowerCase()}:${feeWei.toString()}`;
+}
+function isFeePaid(address: string, ensName: string, feeWei: bigint) {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(feePaidKey(address, ensName, feeWei)) === "1";
+  } catch {
+    return false;
+  }
+}
+function markFeePaid(address: string, ensName: string, feeWei: bigint, txHash: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(feePaidKey(address, ensName, feeWei), "1");
+    window.localStorage.setItem(feePaidKey(address, ensName, feeWei) + ":tx", txHash);
+  } catch {}
+}
+function clearFeePaid(address: string, ensName: string, feeWei: bigint) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(feePaidKey(address, ensName, feeWei));
+    window.localStorage.removeItem(feePaidKey(address, ensName, feeWei) + ":tx");
+  } catch {}
+}
 import { useAccount, useSendTransaction, useWriteContract, usePublicClient } from "wagmi";
 import { useBuilderStore } from "@/lib/store";
 import { FEE_RECIPIENT, PLATFORM_FEE_ETH, PLATFORM_FEE_WEI } from "@/lib/fee";
@@ -91,24 +121,44 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
   const effectiveFee = PLATFORM_FEE_WEI;
   const effectiveFeeETH = PLATFORM_FEE_ETH;
 
+  // If the user already paid the platform fee for this (wallet, name) in a
+  // prior attempt (e.g. contenthash failed and they reloaded), reflect that
+  // in the UI so they know the retry won't re-charge them.
+  useEffect(() => {
+    if (
+      address &&
+      ensName &&
+      step1Status === "idle" &&
+      isFeePaid(address, ensName, effectiveFee)
+    ) {
+      setStep1Status("done");
+    }
+  }, [address, ensName, effectiveFee, step1Status]);
+
   async function handlePublish() {
     if (!address || !ensName || !generatedHtml) return;
     setPublishStatus("paying");
     setPublishError(null);
 
-    // Step 1: Pay platform fee
-    setStep1Status("loading");
-    try {
-      await sendTransactionAsync({
-        to: FEE_RECIPIENT,
-        value: effectiveFee,
-      });
+    // Step 1: Pay platform fee — skip if already paid for this (wallet, name, fee)
+    // tuple. This is what makes Retry safe after a later step fails.
+    if (isFeePaid(address, ensName, effectiveFee)) {
       setStep1Status("done");
-    } catch (err: unknown) {
-      setStep1Status("error");
-      setPublishError((err as Error).message || "Fee payment failed");
-      setPublishStatus("error");
-      return;
+    } else {
+      setStep1Status("loading");
+      try {
+        const feeTxHash = await sendTransactionAsync({
+          to: FEE_RECIPIENT,
+          value: effectiveFee,
+        });
+        markFeePaid(address, ensName, effectiveFee, feeTxHash);
+        setStep1Status("done");
+      } catch (err: unknown) {
+        setStep1Status("error");
+        setPublishError((err as Error).message || "Fee payment failed");
+        setPublishStatus("error");
+        return;
+      }
     }
 
     // Step 2: Upload to IPFS
@@ -231,6 +281,7 @@ export function Step6_Publish({ onBack }: { onBack: () => void }) {
         // Read-back is best-effort; the receipt status above is the source of truth.
       }
 
+      clearFeePaid(address, ensName, effectiveFee);
       setStep3Status("done");
       setPublishStatus("done");
     } catch (err: unknown) {
