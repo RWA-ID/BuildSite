@@ -1,6 +1,6 @@
 "use client";
 import { ProfileData } from "@/lib/store";
-import { OPENSEA_SVG, GRAILS_SVG, EFP_PNG_B64 } from "./portfolioLogos";
+import { OPENSEA_SVG, GRAILS_SVG, EFP_LOGO_SVG } from "./portfolioLogos";
 
 const SVG = {
   arrow: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>`,
@@ -60,6 +60,18 @@ function telegramUrl(handle: string | undefined): string {
   return h ? `https://t.me/${h}` : "";
 }
 
+// Extract the identifier EFP indexes by (ENS name or 0x address) from whatever
+// the user pasted: a full efp.app URL, a bare handle, or nothing (→ ENS name).
+function efpIdFor(efp: string, ensName: string): string {
+  let s = (efp || "").trim();
+  if (!s) return ensName;
+  if (s.startsWith("http")) {
+    const seg = s.split(/[?#]/)[0].replace(/\/+$/, "").split("/").pop();
+    s = seg || ensName;
+  }
+  return s.replace(/^@/, "").trim() || ensName;
+}
+
 const CHAIN_DESC: Record<string, string> = {
   mainnet: "Settlement layer — primary identity & ENS resolution.",
   ethereum: "Settlement layer — primary identity & ENS resolution.",
@@ -99,6 +111,9 @@ export function generateENSMaxiHTML(
   const tg = telegramUrl(profileData.telegram);
   const efp = profileData.efpProfile || "";
   const efpUrl = efp ? (efp.startsWith("http") ? efp : `https://efp.app/${efp}`) : `https://efp.app/${ensName}`;
+  // The ENS name or address EFP indexes by — pulled from the user's URL/handle,
+  // falling back to the primary ENS name. Used to fetch live follow stats.
+  const efpId = efpIdFor(efp, ensName);
 
   const ensAppUrl = `https://app.ens.domains/${ensName}`;
   const primaryChain = chains[0] || "Mainnet";
@@ -113,7 +128,7 @@ export function generateENSMaxiHTML(
   const portfolioLinks = [
     openseaUrl ? { brand: "opensea", url: openseaUrl, label: "OpenSea", logo: OPENSEA_SVG } : null,
     grailsUrl ? { brand: "grails", url: grailsUrl, label: "Grails", logo: GRAILS_SVG } : null,
-    { brand: "efp", url: efpUrl, label: "EFP", logo: `<img src="data:image/png;base64,${EFP_PNG_B64}" alt="Ethereum Follow Protocol" />` },
+    { brand: "efp", url: efpUrl, label: "EFP", logo: EFP_LOGO_SVG },
   ].filter(Boolean) as { brand: string; url: string; label: string; logo: string }[];
   const sponsors: { name: string }[] = profileData.sponsors || [];
   const sponsorEntries = sponsors
@@ -172,7 +187,7 @@ export function generateENSMaxiHTML(
 
   const socialPillars = [
     { name: "Farcaster", icon: SVG.farcaster, handle: profileData.farcaster || "", url: fc, hint: "Decentralized social — onchain casts." },
-    { name: "EFP", icon: SVG.diamond, handle: ensName, url: efpUrl, hint: "Ethereum Follow Protocol — graph onchain." },
+    { name: "EFP", icon: EFP_LOGO_SVG, handle: ensName, url: efpUrl, hint: "Ethereum Follow Protocol — graph onchain." },
     { name: "Lens", icon: SVG.lens, handle: profileData.lens || "", url: ln, hint: "Lens Protocol — own your social graph." },
     { name: "X / Twitter", icon: SVG.twitter, handle: profileData.twitter || "", url: tw, hint: "Where the timeline still happens." },
   ];
@@ -343,6 +358,9 @@ section:last-of-type{border-bottom:none}
 .pillar-body h4{font-size:1.02rem;font-weight:600;margin-bottom:4px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;justify-content:space-between}
 .pillar-body h4 .handle{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-3);font-weight:500}
 .pillar-body p{color:var(--ink-3);font-size:.88rem;line-height:1.5}
+.efp-stats{display:none;gap:18px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--ink-3)}
+.efp-stats.loaded{display:flex}
+.efp-stats b{color:var(--ink);font-weight:600}
 .contact-card{background:var(--bg-1);border:1px solid var(--line);border-radius:16px;padding:32px;position:relative;overflow:hidden}
 .contact-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(91,141,239,.7),rgba(139,92,246,.7),rgba(244,114,182,.5),transparent)}
 .plink{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:var(--bg-3);border:1px solid var(--line-2);color:var(--ink);text-decoration:none;font-size:.88rem;font-weight:500;transition:all .18s ease;width:100%;justify-content:space-between}
@@ -512,11 +530,15 @@ ${chainCards}
         <div class="partner-pillars">
           ${socialPillars.map((p) => {
             const has = !!p.url;
+            const stats = p.name === "EFP"
+              ? `<div class="efp-stats" data-efp-stats><span class="efp-stat"><b data-efp-followers>0</b> followers</span><span class="efp-stat"><b data-efp-following>0</b> following</span></div>`
+              : "";
             const inner = `
             <div class="pillar-icon">${p.icon}</div>
             <div class="pillar-body">
               <h4><span>${escapeHtml(p.name)}</span><span class="handle">${escapeHtml(p.handle || "—")}</span></h4>
               <p>${escapeHtml(p.hint)}</p>
+              ${stats}
             </div>`;
             return has
               ? `<a class="pillar" href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${inner}</a>`
@@ -581,6 +603,25 @@ const io = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+// Live EFP follow stats — fetched client-side from the public, CORS-open EFP
+// API. The stats row stays hidden unless a count comes back, so the page
+// degrades cleanly if EFP is unreachable or has no data for this identity.
+(function(){
+  var id = ${JSON.stringify(efpId)};
+  var box = document.querySelector('[data-efp-stats]');
+  if (!id || !box) return;
+  fetch('https://api.ethfollow.xyz/api/v1/users/' + encodeURIComponent(id) + '/stats')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d) return;
+      var f = box.querySelector('[data-efp-followers]');
+      var g = box.querySelector('[data-efp-following]');
+      if (f) f.textContent = Number(d.followers_count || 0).toLocaleString();
+      if (g) g.textContent = Number(d.following_count || 0).toLocaleString();
+      box.classList.add('loaded');
+    })
+    .catch(function(){});
+})();
 // Hash-anchor clicks: scroll inside the document instead of letting the
 // browser navigate (prevents in-iframe srcdoc previews from bouncing to the
 // embedder URL on Safari/Chrome).

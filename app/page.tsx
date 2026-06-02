@@ -5,7 +5,7 @@ import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
 import { useMounted } from "@/hooks/useMounted";
 import { ConnectButton } from "@/components/ui/ConnectButton";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAppKit } from "@reown/appkit/react";
 import { CATEGORIES, TEMPLATES } from "@/lib/templates";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { MacBookFrame } from "@/components/ui/MacBookFrame";
@@ -45,7 +45,7 @@ const FAQS = [
   { q: "Is this truly permanent?", a: "Yes. Your HTML lives on IPFS — distributed, with no central server. Anyone can pin it. As long as it exists on the network, it's accessible." },
   { q: "What does the 0.00825 ETH cover?", a: "Pinata IPFS storage (pinned permanently) and platform infrastructure. ENS registration and gas fees are paid separately at cost." },
   { q: "Can I update my site later?", a: "Yes — go through the wizard again with your existing ENS name. A new IPFS CID is generated and your contenthash updated. Old version remains accessible if pinned." },
-  { q: "Which wallets work?", a: "Any EVM wallet via RainbowKit — MetaMask, Coinbase Wallet, Rabby, Rainbow, Ledger, WalletConnect, and more." },
+  { q: "Which wallets work?", a: "Any EVM wallet via Reown AppKit — MetaMask, Coinbase Wallet, Rabby, Rainbow, Ledger, WalletConnect, and more." },
   { q: "Do I need to know how to code?", a: "Not at all. The 6-step wizard handles everything. The HTML output is professional-grade and fully self-contained — no build step, no dependencies." },
 ];
 
@@ -53,7 +53,7 @@ export default function HomePage() {
   const mounted = useMounted();
   const [activeCategory, setActiveCategory] = useState("all");
   const { isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { open: openConnectModal } = useAppKit();
   const router = useRouter();
   const pendingBuild = useRef(false);
 
@@ -72,7 +72,7 @@ export default function HomePage() {
       router.push("/build");
     } else {
       pendingBuild.current = true;
-      openConnectModal?.();
+      openConnectModal({ view: "Connect" });
     }
   }
 

@@ -1,5 +1,6 @@
 "use client";
 import { ProfileData, ProjectEntry, StatEntry } from "@/lib/store";
+import { EFP_LOGO_SVG } from "./portfolioLogos";
 
 const SVG = {
   arrow: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>`,
@@ -32,6 +33,18 @@ function telegramUrl(handle: string | undefined): string {
   return h ? `https://t.me/${h}` : "";
 }
 
+// Extract the identifier EFP indexes by (ENS name or 0x address) from whatever
+// the user pasted: a full efp.app URL, a bare handle, or nothing (→ ENS name).
+function efpIdFor(efp: string, ensName: string): string {
+  let s = (efp || "").trim();
+  if (!s) return ensName;
+  if (s.startsWith("http")) {
+    const seg = s.split(/[?#]/)[0].replace(/\/+$/, "").split("/").pop();
+    s = seg || ensName;
+  }
+  return s.replace(/^@/, "").trim() || ensName;
+}
+
 export function generateENSGiantHTML(
   profileData: Partial<ProfileData>,
   ensName: string,
@@ -61,6 +74,8 @@ export function generateENSGiantHTML(
   const dc = profileData.discord || "";
   const efp = profileData.efpProfile || "";
   const efpUrl = efp ? (efp.startsWith("http") ? efp : `https://efp.app/${efp}`) : "";
+  // EFP identity for live follow stats (only used when an EFP URL is provided).
+  const efpId = efpIdFor(efp, ensName);
 
   const connectTiles: Array<{ icon: string; label: string; handle: string; url: string }> = [];
   if (tw) connectTiles.push({ icon: SVG.twitter, label: "X / Twitter", handle: profileData.twitter || "", url: tw });
@@ -141,8 +156,13 @@ export function generateENSGiantHTML(
     </div>
     <div class="efp-card reveal">
       <div class="efp-info">
+        <span class="efp-logo">${EFP_LOGO_SVG}</span>
         <div class="efp-title">Follow ${escapeHtml(ensName)} on EFP</div>
         <p class="efp-desc">Visit my EFP profile to follow on-chain.</p>
+        <div class="efp-stats" data-efp-stats>
+          <div class="efp-stat"><div class="efp-stat-num" data-efp-followers>0</div><div class="efp-stat-label">Followers</div></div>
+          <div class="efp-stat"><div class="efp-stat-num" data-efp-following>0</div><div class="efp-stat-label">Following</div></div>
+        </div>
         <a href="${escapeHtml(efpUrl)}" class="btn btn-primary" target="_blank">View EFP profile ${SVG.arrow}</a>
       </div>
       <div class="efp-qr" style="display:flex;align-items:center;justify-content:center;width:220px;height:220px;">
@@ -321,8 +341,14 @@ section:last-of-type{border-bottom:none}
 .efp-card{display:grid;grid-template-columns:1fr auto;gap:48px;align-items:center;padding:44px;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden}
 .efp-card::before{content:'';position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(245,176,65,.18),transparent 70%);pointer-events:none}
 .efp-info{position:relative}
+.efp-logo{display:inline-flex;width:52px;height:52px;margin-bottom:18px}
+.efp-logo svg{width:100%;height:100%;border-radius:12px}
 .efp-title{font-size:1.6rem;font-weight:600;letter-spacing:-.02em;margin-bottom:12px}
 .efp-desc{color:var(--ink-2);margin-bottom:24px;max-width:420px}
+.efp-stats{display:none;gap:36px;margin-bottom:26px}
+.efp-stats.loaded{display:flex}
+.efp-stat-num{font-family:'JetBrains Mono',monospace;font-size:1.9rem;font-weight:600;letter-spacing:-.02em;line-height:1;color:var(--ink)}
+.efp-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin-top:7px}
 .efp-qr{position:relative;padding:12px;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
 @media(max-width:880px){.efp-card{grid-template-columns:1fr;padding:28px;gap:28px}}
 .partner-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:start}
@@ -426,6 +452,25 @@ const io = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+// Live EFP follow stats — fetched client-side from the public, CORS-open EFP
+// API. The stats row stays hidden unless a count comes back, so the page
+// degrades cleanly if EFP is unreachable or has no data for this identity.
+(function(){
+  var id = ${JSON.stringify(efpId)};
+  var box = document.querySelector('[data-efp-stats]');
+  if (!id || !box) return;
+  fetch('https://api.ethfollow.xyz/api/v1/users/' + encodeURIComponent(id) + '/stats')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d) return;
+      var f = box.querySelector('[data-efp-followers]');
+      var g = box.querySelector('[data-efp-following]');
+      if (f) f.textContent = Number(d.followers_count || 0).toLocaleString();
+      if (g) g.textContent = Number(d.following_count || 0).toLocaleString();
+      box.classList.add('loaded');
+    })
+    .catch(function(){});
+})();
 </script>
 </body>
 </html>`;
